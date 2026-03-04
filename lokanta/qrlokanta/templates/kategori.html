@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ kategori_ad }} | GastroPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FDFDFD; }
+        
+        /* Kartın genel yumuşaklığı */
+        .grid-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        /* Tıklama efekti */
+        .grid-card:active { transform: scale(0.95); }
+
+        /* Tükendi efekti */
+        .is-out {
+            filter: grayscale(1);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Cam efekti sepet butonu */
+        .glass-btn {
+            background: rgba(17, 17, 17, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Görselin altındaki hafif gölge */
+        .img-gradient {
+            background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 40%);
+        }
+    </style>
+</head>
+
+<body class="pb-24 overflow-x-hidden">
+
+    <nav class="sticky top-0 z-50 bg-white/70 backdrop-blur-xl px-5 py-4 flex items-center justify-between border-b border-gray-50">
+        <a href="/" onclick="event.preventDefault(); window.location.replace(this.href);" class="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 text-gray-800">
+            <i class="fa-solid fa-arrow-left-long"></i>
+        </a>
+        <div class="flex flex-col items-center">
+            <h1 class="text-sm font-800 text-gray-900 uppercase tracking-tighter">{{ kategori_ad }}</h1>
+            <div class="h-1 w-4 bg-orange-500 rounded-full mt-0.5"></div>
+        </div>
+        <button class="w-10 h-10 flex items-center justify-center text-gray-400">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </nav>
+
+    <main class="p-4 max-w-4xl mx-auto">
+        
+        <div class="grid grid-cols-2 gap-4">
+            {% for u in urunler %}
+            {% set stokta = u.stokta_mi != false %}
+            
+            <div data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
+                <a href="{% if stokta %}/urun/{{ u.id }}{% else %}javascript:void(0){% endif %}" onclick="event.preventDefault(); window.location.replace(this.href);"
+                   class="grid-card relative flex flex-col bg-white rounded-[28px] overflow-hidden shadow-sm h-full {% if not stokta %}is-out{% endif %}">
+                    
+                    <div class="relative w-full aspect-square overflow-hidden">
+                        <img src="/static/uploads/{{ u.fotograf_url }}" 
+                             class="w-full h-full object-cover transform transition-transform duration-500 hover:scale-110"
+                             onerror="this.src='/static/uploads/default.jpg'">
+                        
+                        <div class="absolute inset-0 img-gradient"></div>
+
+                        <div class="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-sm">
+                            <span class="text-xs font-black text-gray-900">{{ u.fiyat }} ₺</span>
+                        </div>
+
+                        {% if not stokta %}
+                        <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center">
+                            <span class="bg-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full">TÜKENDİ</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="p-3 flex flex-col flex-1">
+                        <h3 class="font-bold text-gray-800 text-sm leading-tight line-clamp-1">{{ u.ad }}</h3>
+                        <p class="text-[10px] text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            {{ u.aciklama if u.aciklama else "Özel tarifli lezzet..." }}
+                        </p>
+                        
+                        <div class="mt-auto pt-3 flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <i class="fa-solid fa-star text-[8px] text-yellow-400"></i>
+                                <span class="text-[9px] font-bold text-gray-500">4.9</span>
+                            </div>
+                            <div class="w-7 h-7 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+    </main>
+
+    {% if not urunler %}
+    <div class="flex flex-col items-center justify-center py-24 px-10 text-center" data-aos="zoom-in">
+        <div class="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+            <i class="fa-solid fa-utensils text-2xl text-orange-200"></i>
+        </div>
+        <h2 class="text-lg font-bold text-gray-800">Menü Güncelleniyor</h2>
+        <p class="text-xs text-gray-400 mt-2">Bu kategori çok yakında yeni lezzetlerle dolacak.</p>
+    </div>
+    {% endif %}
+
+    {% if session.get('sepet') %}
+    <div class="fixed bottom-6 left-0 right-0 px-6 z-50" data-aos="fade-up" data-aos-anchor-placement="bottom-bottom">
+        <a href="/sepet" onclick="event.preventDefault(); window.location.replace(this.href);" class="max-w-md mx-auto glass-btn h-14 rounded-2xl flex items-center justify-between px-6 shadow-2xl shadow-orange-500/20 border border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <i class="fa-solid fa-basket-shopping text-white text-lg"></i>
+                    <span class="absolute -top-2 -right-2 bg-orange-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black">
+                        {{ session.get('sepet')|length }}
+                    </span>
+                </div>
+                <span class="text-white text-xs font-bold tracking-tight">Sepeti Görüntüle</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-white/50 text-xs"></i>
+        </a>
+    </div>
+    {% endif %}
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            easing: 'ease-out-back'
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gusto Pro | Yönetim Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 font-sans">
+
+    <div class="flex min-h-screen">
+        <div class="w-72 bg-slate-900 text-white p-8">
+            <h1 class="text-3xl font-black mb-12 text-orange-500 tracking-tighter">GUSTO PRO</h1>
+            <nav class="space-y-6">
+                <a href="#" class="flex items-center p-4 bg-orange-600 rounded-2xl shadow-lg shadow-orange-900/20">
+                    <i class="fa-solid fa-store mr-4 text-xl"></i> <span class="font-bold">Lokantalar</span>
+                </a>
+                <a href="/super-admin/logout" class="flex items-center p-4 text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-right-from-bracket mr-4"></i> Çıkış Yap
+                </a>
+            </nav>
+        </div>
+
+        <div class="flex-1 p-12">
+            <header class="flex justify-between items-center mb-12">
+                <div>
+                    <h2 class="text-4xl font-black text-slate-800 tracking-tight">Sistem Yönetimi</h2>
+                    <p class="text-slate-500 font-medium mt-1">Şu an tüm işletmeleri kontrol ediyorsun.</p>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-10">
+                <div class="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 h-fit sticky top-12">
+                    <h3 class="text-xl font-bold mb-8 text-slate-800 italic">Yeni İşletme Kaydı</h3>
+                    <form action="/super-admin/lokanta-ekle" method="POST" class="space-y-5">
+                        <input type="text" name="ad" placeholder="Lokanta Adı" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-orange-500" required>
+                        <input type="email" name="eposta" placeholder="Admin E-posta" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-orange-500" required>
+                        <input type="text" name="sifre" placeholder="Giriş Şifresi" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-orange-500" required>
+                        <input type="number" name="masa_sayisi" placeholder="Masa Sayısı" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-orange-500" required>
+                        <button type="submit" class="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-xl shadow-slate-200">
+                            Hemen Oluştur
+                        </button>
+                    </form>
+                </div>
+
+                <div class="xl:col-span-3 bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="p-8 font-bold text-slate-500 text-sm uppercase tracking-wider">İşletme Bilgisi</th>
+                                <th class="p-8 font-bold text-slate-500 text-sm uppercase tracking-wider">Masa</th>
+                                <th class="p-8 font-bold text-slate-500 text-sm uppercase tracking-wider">Durum</th>
+                                <th class="p-8 font-bold text-slate-500 text-sm uppercase tracking-wider text-right">Eylemler</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            {% for l in lokantalar %}
+                            <tr class="hover:bg-slate-50/50 transition-all">
+                                <td class="p-8">
+                                    <div class="font-black text-slate-800 text-lg">{{ l.ad }}</div>
+                                    <div class="text-slate-400 text-sm">{{ l.eposta }} | <span class="italic text-blue-500">/menu/{{ l.slug }}</span></div>
+                                </td>
+                                <td class="p-8">
+                                    <span class="bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl">{{ l.masa_sayisi }}</span>
+                                </td>
+                                <td class="p-8">
+                                    {% if l.aktif_mi %}
+                                    <span class="flex items-center text-green-600 font-bold text-sm"><span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> AKTİF</span>
+                                    {% else %}
+                                    <span class="text-red-400 font-bold text-sm">PASİF</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-8 text-right space-x-2">
+                                    <button class="bg-blue-50 text-blue-600 p-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all font-bold text-sm">
+                                        <a href="/super-admin/qr-bas/{{ l.id }}" class="bg-blue-50 text-blue-600 p-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all font-bold text-sm inline-block">
+                                            <i class="fa-solid fa-qrcode mr-1"></i> QR BAS
+                                        </a>
+                                    </button>
+                                    <button class="bg-slate-100 text-slate-600 p-3 rounded-xl hover:bg-slate-900 hover:text-white transition-all">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

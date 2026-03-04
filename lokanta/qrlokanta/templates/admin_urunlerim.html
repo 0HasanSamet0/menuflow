@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Menü Yönetimi | GastroPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .active-tab { background-color: #f97316 !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3); }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900">
+
+    <nav class="glass sticky top-0 z-50 border-b border-slate-200/60 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/admin" class="flex items-center group">
+                <div class="bg-white shadow-sm border border-slate-200 p-2.5 rounded-2xl group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </div>
+                <span class="ml-4 font-bold text-slate-600 group-hover:text-orange-600 transition-colors">Yönetim Paneli</span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="/adminurunekle" class="bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-semibold hover:bg-orange-600 transition-all shadow-lg shadow-slate-200 flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i> Yeni Ürün
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-10">
+        
+        <div class="mb-12">
+            <h1 class="text-5xl font-extrabold tracking-tight mb-4">Menü <span class="text-orange-500">Kataloğu</span></h1>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <p class="text-slate-500 text-lg max-w-xl">Ürünlerini düzenle, fiyatlarını güncelle ve müşterilerine en iyi sunumu yap.</p>
+                <div class="relative group">
+                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
+                    <input type="text" id="ara" onkeyup="araFonk()" placeholder="Ürünlerde ara..." 
+                           class="bg-white border border-slate-200 pl-12 pr-6 py-4 rounded-[20px] w-full md:w-80 outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 overflow-x-auto pb-4 mb-10 custom-scrollbar no-select">
+            <button onclick="tabDegis('all')" id="tab-all" class="tab-btn active-tab whitespace-nowrap px-8 py-3.5 rounded-2xl font-bold bg-white border border-slate-200 text-slate-600 transition-all">
+                Tüm Ürünler
+            </button>
+            {% for kat in kategoriler %}
+            <button onclick="tabDegis('kat-{{ kat.id }}')" id="tab-kat-{{ kat.id }}" class="tab-btn whitespace-nowrap px-8 py-3.5 rounded-2xl font-bold bg-white border border-slate-200 text-slate-600 hover:border-orange-500 transition-all">
+                {{ kat.ad }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="urun-grid">
+            {% for u in urunler %}
+            <div class="urun-kart group bg-white rounded-[2.5rem] p-4 border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500" data-kategori="kat-{{ u.kategori_id }}">
+                <div class="relative overflow-hidden rounded-[2rem] h-52 mb-6">
+                    <img src="/static/uploads/{{ u.fotograf_url if u.fotograf_url else 'default.jpg' }}" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                        <span class="text-white text-sm font-medium">Fotoğrafı Güncelle</span>
+                    </div>
+                    <div class="absolute top-4 right-4 glass px-4 py-2 rounded-2xl shadow-xl border border-white/40">
+                        <span class="font-extrabold text-slate-900">{{ u.fiyat }} ₺</span>
+                    </div>
+                </div>
+
+                <div class="px-2">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800 leading-tight">{{ u.ad }}</h3>
+                    </div>
+                    <p class="text-slate-400 text-sm mb-6 line-clamp-2 italic">"{{ u.aciklama if u.aciklama else 'Açıklama girilmemiş...' }}"</p>
+                    
+                    <div class="flex items-center gap-2">
+                        <a href="/admin/urun-duzenle/{{ u.id }}" class="flex-1 bg-slate-50 text-slate-700 text-center py-4 rounded-2xl font-bold text-sm hover:bg-slate-900 hover:text-white transition-all duration-300">
+                            Düzenle
+                        </a>
+                        <button onclick="confirmDelete('{{ u.id }}')" class="w-14 h-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-500 hover:text-white transition-all duration-300">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        // Tab Sistemi (Filtreleme)
+        function tabDegis(katId) {
+            // Buton Stilini Güncelle
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+            document.getElementById('tab-' + katId).classList.add('active-tab');
+
+            // Kartları Filtrele
+            const kartlar = document.querySelectorAll('.urun-kart');
+            kartlar.forEach(kart => {
+                if (katId === 'all' || kart.getAttribute('data-kategori') === katId) {
+                    kart.style.display = 'block';
+                    // Küçük bir giriş animasyonu
+                    kart.style.opacity = '0';
+                    setTimeout(() => { kart.style.opacity = '1'; }, 10);
+                } else {
+                    kart.style.display = 'none';
+                }
+            });
+        }
+
+        // Arama Fonksiyonu
+        function araFonk() {
+            let kelime = document.getElementById("ara").value.toLowerCase();
+            let kartlar = document.querySelectorAll(".urun-kart");
+            
+            kartlar.forEach(k => {
+                let metin = k.querySelector('h3').innerText.toLowerCase();
+                k.style.display = metin.includes(kelime) ? "block" : "none";
+            });
+        }
+
+        function confirmDelete(id) {
+            if(confirm('Dikkat! Bu ürün kalıcı olarak silinecek. Onaylıyor musun?')) {
+                window.location.href = '/admin/urun-sil/' + id;
+            }
+        }
+    </script>
+</body>
+</html>

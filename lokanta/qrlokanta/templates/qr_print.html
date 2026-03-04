@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ lokanta.ad }} - QR Kodları</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .qr-card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <div class="no-print bg-slate-800 text-white p-6 rounded-2xl mb-8 flex justify-between items-center shadow-lg">
+            <div>
+                <h1 class="text-2xl font-bold">{{ lokanta.ad }} Baskı Paneli</h1>
+                <p class="text-slate-400 text-sm">Toplam {{ qr_kodlar|length }} masa için QR oluşturuldu.</p>
+            </div>
+            <button onclick="window.print()" class="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold transition-all">
+                <i class="fa-solid fa-print"></i> YAZDIR / PDF YAP
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% for qr in qr_kodlar %}
+            <div class="qr-card bg-white p-6 rounded-2xl border-2 border-dashed border-slate-200 text-center shadow-sm">
+                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">GUSTO PRO</div>
+                <img src="data:image/png;base64,{{ qr.qr_base64 }}" class="w-full h-auto mx-auto mb-4" alt="Masa {{ qr.masa_no }}">
+                <div class="font-black text-2xl text-slate-800">MASA {{ qr.masa_no }}</div>
+                <div class="text-[10px] text-slate-500 mt-2 italic">{{ lokanta.ad }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html> 

@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GastroPro | Admin Kontrol</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+        body { font-family: 'Outfit', sans-serif; background-color: #f8fafc; }
+        .admin-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .admin-card:hover { transform: translateY(-10px); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-6">  
+    <div class="max-w-4xl w-full">
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-900 text-slate-900 tracking-tighter">YÖNETİM <span class="text-orange-500">PANELİ</span></h1>
+            <p class="text-slate-400 mt-2 font-medium">Lütfen yapmak istediğiniz işlemi seçin</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <a href="/admin/urunlerim" class="admin-card group bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center text-center">
+                <div class="w-24 h-24 bg-orange-100 text-orange-600 rounded-3xl flex items-center justify-center text-4xl mb-6 group-hover:bg-orange-500 group-hover:text-white transition-all">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Ürünlerim</h2>
+                <p class="text-slate-400 text-sm">Mevcut ürünleri gör, fiyatları güncelle veya ürünleri sil.</p>
+            </a>
+
+            <a href="/adminurunekle" class="admin-card group bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center text-center">
+                <div class="w-24 h-24 bg-green-100 text-green-600 rounded-3xl flex items-center justify-center text-4xl mb-6 group-hover:bg-green-500 group-hover:text-white transition-all">
+                    <i class="fa-solid fa-circle-plus"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Ürün Ekle</h2>
+                <p class="text-slate-400 text-sm">Menüye yeni lezzetler, kategoriler ve fiyatlar dahil et.</p>
+            </a>
+        </div>
+
+        <div class="mt-12 text-center">
+            <a href="/" class="text-slate-400 hover:text-slate-900 font-bold transition-all"><i class="fa-solid fa-house mr-2"></i> Canlı Menüye Git</a>
+        </div>
+    </div>
+
+</body>
+</html>

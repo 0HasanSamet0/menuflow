@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ urun.ad }} | GastroPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #ffffff; color: #111; }
+        
+        /* Ürün resmi için yumuşak gölge ve odak */
+        .img-hero {
+            filter: drop-shadow(0 25px 35px rgba(0,0,0,0.12));
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .img-hero:hover { transform: scale(1.05); }
+
+        /* Modern Checkbox Tasarımı */
+        .extra-input:checked + label {
+            border-color: #111;
+            background-color: #f8fafc;
+        }
+        .extra-input:checked + label .check-icon { opacity: 1; transform: scale(1); }
+
+        /* Alt bar cam efekti */
+        .action-bar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .custom-textarea:focus { border-color: #111; }
+    </style>
+</head>
+<body class="pb-40">
+
+    <nav class="fixed top-0 left-0 right-0 z-50 p-6 flex justify-between items-center">
+        <a href="/kategori/{{ urun.kategori_id }}" onclick="event.preventDefault(); window.location.replace(this.href);" 
+           class="w-11 h-11 flex items-center justify-center bg-white border border-gray-100 rounded-full shadow-sm active:scale-90 transition">
+            <i class="fa-solid fa-arrow-left text-gray-900"></i>
+        </a>
+        <h2 class="text-sm font-800 uppercase tracking-[0.2em] text-gray-400">Detaylar</h2>
+        <div class="w-11 h-11"></div> </nav>
+
+    <div class="relative w-full h-[40vh] bg-[#fdfdfd] flex items-center justify-center p-10">
+        <img src="/static/uploads/{{ urun.fotograf_url }}" 
+             class="img-hero max-w-full max-h-full object-contain"
+             onerror="this.src='/static/uploads/default.jpg'">
+    </div>
+
+    <main class="px-8 mt-4 max-w-2xl mx-auto">
+        
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-800 tracking-tight text-gray-900 mb-3">{{ urun.ad }}</h1>
+            <div class="text-2xl font-500 text-gray-900">{{ urun.fiyat }} ₺</div>
+        </div>
+
+        <div class="mb-12">
+            <div class="h-[1px] w-12 bg-gray-200 mx-auto mb-6"></div>
+            <p class="text-gray-500 text-center leading-relaxed text-sm font-medium px-4">
+                {{ urun.aciklama if urun.aciklama else "Bu lezzet için henüz bir açıklama girilmemiş." }}
+            </p>
+            <div class="h-[1px] w-12 bg-gray-200 mx-auto mt-6"></div>
+        </div>
+
+        <form id="sepetForm">
+            <input type="hidden" name="urun_id" value="{{ urun.id }}">
+            <input type="hidden" name="urun_ad" value="{{ urun.ad }}">
+            <input type="hidden" name="fiyat" id="gizli_fiyat" value="{{ urun.fiyat }}">
+            <input type="hidden" name="resim" value="{{ urun.fotograf_url }}">
+
+            {% if ekstralar %}
+            <div class="mb-12">
+                <h3 class="text-[11px] font-800 text-gray-400 uppercase tracking-[0.2em] mb-6">Seçeneklerinizi Belirleyin</h3>
+                <div class="space-y-3">
+                    {% for ekstra in ekstralar %}
+                    <div class="relative">
+                        <input type="checkbox" name="ekstra" value="{{ ekstra.ekstra_ad }}:{{ ekstra.ekstra_fiyat }}" 
+                               id="opt-{{ ekstra.id }}" class="hidden extra-input extra-cb">
+                        <label for="opt-{{ ekstra.id }}" class="flex items-center justify-between p-5 rounded-2xl border border-gray-100 bg-white cursor-pointer transition-all hover:border-gray-300 active:scale-[0.98]">
+                            <div class="flex items-center gap-4">
+                                <div class="check-icon opacity-0 scale-50 transition-all w-5 h-5 bg-black rounded-full flex items-center justify-center">
+                                    <i class="fa-solid fa-check text-[10px] text-white"></i>
+                                </div>
+                                <span class="text-sm font-700 text-gray-800">{{ ekstra.ekstra_ad }}</span>
+                            </div>
+                            <span class="text-sm font-500 text-gray-400">+ {{ ekstra.ekstra_fiyat }} ₺</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mb-10">
+                <h3 class="text-[11px] font-800 text-gray-400 uppercase tracking-[0.2em] mb-6">Özel İstek</h3>
+                <textarea name="not" rows="2" placeholder="Siparişinize eklemek istediğiniz bir not var mı?" 
+                          class="custom-textarea w-full bg-gray-50 border border-transparent rounded-2xl p-5 text-sm outline-none transition-all placeholder:text-gray-300 resize-none"></textarea>
+            </div>
+        </form>
+    </main>
+
+    <div class="fixed bottom-0 left-0 w-full action-bar px-8 py-6 pb-10 z-50">
+        <div class="max-w-md mx-auto flex items-center gap-6">
+            
+            <div class="flex items-center gap-6 border-b-2 border-gray-100 pb-1">
+                <button type="button" onclick="changeQty(-1)" class="text-gray-300 hover:text-black transition text-2xl font-light">-</button>
+                <input type="number" id="qty" name="adet" value="1" readonly class="w-6 bg-transparent text-center font-800 text-lg outline-none">
+                <button type="button" onclick="changeQty(1)" class="text-gray-300 hover:text-black transition text-2xl font-light">+</button>
+            </div>
+
+            <button type="button" onclick="formuGonder()" id="submitBtn" 
+                    class="flex-1 bg-black text-white h-16 rounded-2xl flex items-center justify-center gap-4 transition-all active:scale-95 shadow-2xl shadow-black/10">
+                <span class="font-800 text-sm uppercase tracking-widest">Sepete Ekle</span>
+                <span class="w-[1px] h-4 bg-white/20"></span>
+                <span id="total_price" class="font-600 text-lg">{{ urun.fiyat }} ₺</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const unitPrice = parseFloat("{{ urun.fiyat }}".replace(',', '.'));
+        const checkboxes = document.querySelectorAll('.extra-cb');
+        const totalDisplay = document.getElementById('total_price');
+        const qtyInput = document.getElementById('qty');
+        const gizliFiyatInput = document.getElementById('gizli_fiyat');
+
+        function hesapla() {
+            let extraTotal = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    let p = parseFloat(cb.value.split(':')[1]) || 0;
+                    extraTotal += p;
+                }
+            });
+            let miktar = parseInt(qtyInput.value);
+            let tekilFiyat = unitPrice + extraTotal;
+            gizliFiyatInput.value = tekilFiyat.toFixed(2);
+            totalDisplay.innerText = (tekilFiyat * miktar).toFixed(2) + " ₺";
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', hesapla));
+
+        function changeQty(amt) {
+            let v = parseInt(qtyInput.value) + amt;
+            if (v >= 1) { qtyInput.value = v; hesapla(); }
+        }
+
+        function formuGonder() {
+            const submitBtn = document.getElementById('submitBtn');
+            const form = document.getElementById('sepetForm');
+            const formData = new FormData(form);
+            formData.append('adet', qtyInput.value);
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-white"></i>';
+
+            fetch('/sepete-ekle', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if(response.ok) {
+                    submitBtn.innerHTML = '<i class="fa-solid fa-check text-white"></i>';
+                    setTimeout(() => window.location.replace("/sepet"), 500);
+                }
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'HATA';
+            });
+        }
+    </script>
+</body>
+</html>

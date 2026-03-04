@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>GastroPro | Yönetim Girişi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center p-6">
+    <div class="max-w-md w-full bg-white rounded-[3rem] p-10 shadow-2xl">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-black text-slate-800 tracking-tighter">YÖNETİM <span class="text-orange-500">GİRİŞİ</span></h1>
+            <p class="text-gray-400 text-sm mt-2">Lütfen yetkili bilgilerinizi giriniz.</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-500 p-4 rounded-2xl mb-6 text-center text-sm font-bold">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="space-y-6">
+            <div>
+                <label class="block text-xs font-black uppercase text-gray-400 ml-2 mb-1">Kullanıcı Adı</label>
+                <input type="email" name="email" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none transition" required>
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase text-gray-400 ml-2 mb-1">Şifre</label>
+                <input type="password" name="password" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 rounded-2xl outline-none transition" required>
+            </div>
+            <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-200 transition active:scale-95">
+                SİSTEME GİRİŞ YAP
+            </button>
+        </form>
+    </div>
+</body>
+</html>

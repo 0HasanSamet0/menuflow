@@ -193,6 +193,31 @@ def qr_bas_sayfasi(id):
 
     return render_template("qr_print.html", lokanta=lokanta, qr_kodlar=qr_kodlar)
 
+# --- LOKANTAYA SIZMA AKSİYONU ---
+@app.route('/super-admin/lokantaya-siz/<int:lokanta_id>')
+@super_admin_required  # Bu senin yukarıda tanımladığın decorator, giriş yapılmadıysa login'e atar.
+def lokantaya_siz(lokanta_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Seçtiğin lokantayı veritabanından bul
+    cur.execute("SELECT id, ad, slug FROM lokantalar WHERE id = %s", (lokanta_id,))
+    lokanta = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if lokanta:
+        # --- KRİTİK: KİMLİK DEĞİŞİMİ ---
+        # Lokantacı panelinin (@app.route("/admin")) beklediği session verilerini dolduruyoruz.
+        session["admin_logged_in"] = True
+        session["lokanta_id"] = lokanta['id']
+        session["lokanta_ad"] = lokanta['ad']
+        session["lokanta_slug"] = lokanta['slug'] # Menü yönlendirmeleri için bu da lazım olabilir
+        
+        # İşlem tamam, şimdi normal admin paneline fırlatıyoruz
+        return redirect("/admin") 
+    
+    return "Hata: Lokanta bulunamadı!", 404
 #-------------------------------------------------------------------------------
 # GİRİŞ SAYFASI ROTASI
 @app.route("/login", methods=["GET", "POST"])
@@ -224,6 +249,12 @@ def login():
 def logout():
     session.pop("admin_logged_in", None)
     return redirect("/login")
+#şifre_kurtarma
+@app.route("/sifremi-unuttum")
+def sifremi_unuttum():
+    # Burayı istersen bir HTML sayfasına bağla, 
+    # istersen direkt destek mesajına yönlendir.
+    return render_template("sifre_destek.html")
 
 # ---------- ANA SAYFA ----------
 @app.route("/")
@@ -376,6 +407,37 @@ def admin_urunekle():
     cur.close()
     conn.close()
     return render_template("admin_urunekle.html", kategoriler=kategoriler)
+
+
+@app.route("/admin/sifre-degistir", methods=["GET", "POST"])
+@login_required # Sadece giriş yapmış lokantacı girebilir
+def admin_sifre_degistir():
+    if request.method == "POST":
+        yeni_sifre = request.form.get("yeni_sifre")
+        yeni_sifre_tekrar = request.form.get("yeni_sifre_tekrar")
+        lokanta_id = session.get("lokanta_id")
+
+        if yeni_sifre != yeni_sifre_tekrar:
+            return "Şifreler birbiriyle uyuşmuyor!", 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("UPDATE lokantalar SET sifre = %s WHERE id = %s", (yeni_sifre, lokanta_id))
+            conn.commit()
+            # Şifre değişince güvenlik için tekrar login'e atalım mı? 
+            # İstersen atarız ama şimdilik panele geri gönderelim.
+            return redirect("/admin")
+        except Exception as e:
+            conn.rollback()
+            print(f"Şifre güncelleme hatası: {e}")
+            return "Bir hata oluştu!", 500
+        finally:
+            cur.close()
+            conn.close()
+
+    # GET isteği gelirse şifre değiştirme formunu göster
+    return render_template("admin_sifre.html")
 
 # ---------- ÜRÜN DETAY ----------
 @app.route("/urun/<int:id>")

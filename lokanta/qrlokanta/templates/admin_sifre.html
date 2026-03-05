@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>GastroPro | Şifre Değiştir</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-6">
+    <div class="max-w-md w-full bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+        <h2 class="text-3xl font-black text-slate-900 mb-6 tracking-tight">Şifreni Güncelle</h2>
+        <form action="/admin/sifre-degistir" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-slate-500 mb-2 font-bold ml-2">Yeni Şifre</label>
+                <input type="password" name="yeni_sifre" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-500" required>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-2 font-bold ml-2">Yeni Şifre (Tekrar)</label>
+                <input type="password" name="yeni_sifre_tekrar" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-500" required>
+            </div>
+            <button type="submit" class="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-lg">
+                Şifreyi Güncelle
+            </button>
+            <a href="/admin" class="block text-center text-slate-400 font-bold mt-4">Vazgeç</a>
+        </form>
+    </div>
+</body>
+</html>

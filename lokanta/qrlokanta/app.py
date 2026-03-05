@@ -7,6 +7,8 @@ import qrcode
 import io
 import base64
 from flask_socketio import SocketIO, emit
+from dotenv import load_dotenv
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 app.secret_key = 'gizli_anahtar_gastropro'
@@ -25,17 +27,19 @@ ADMIN_USER = "admin"
 ADMIN_PASS = "1234"
 
 
+load_dotenv()
+
 def get_db_connection():
+    # Artık elle yazmıyoruz, os.getenv ile dosyadan çekiyoruz
     conn = psycopg2.connect(
-        host="localhost",
-        database="menuflow_db",     # Sunucuda açtığımız isim
-        user="gastro_admin",        # Sunucuda açtığımız kullanıcı
-        password="X.3e!!a*dfghjklm.*WW3-.", 
-        port="5432",
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        port=os.getenv("DB_PORT", "5432"),
         cursor_factory=RealDictCursor
     )
     return conn
-
 
 # TEST BAĞLANTI
 try:

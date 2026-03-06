@@ -1,32 +1,29 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sepetim | GastroPro</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sepetim | GastroPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-body{
-font-family:'Plus Jakarta Sans',sans-serif;
-background:linear-gradient(180deg,#f8fafc,#eef2f7);
-}
-.card{ transition:.35s cubic-bezier(.4,0,.2,1); }
-.card:hover{ transform:translateY(-4px) scale(1.01); box-shadow:0 25px 60px rgba(0,0,0,.12); }
-.fade-in{ animation:fade .45s ease; }
-@keyframes fade{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-.glass{ background:rgba(255,255,255,.75); backdrop-filter:blur(18px); border-top:1px solid rgba(0,0,0,.06); }
-.btn-premium{ background:linear-gradient(135deg,#ff7a18,#ff5200); box-shadow:0 18px 40px rgba(255,115,0,.25); }
-.btn-premium:hover{ transform:translateY(-1px); box-shadow:0 22px 50px rgba(255,115,0,.35); }
-</style>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body{ font-family:'Plus Jakarta Sans',sans-serif; background:linear-gradient(180deg,#f8fafc,#eef2f7); }
+        .card{ transition:.35s cubic-bezier(.4,0,.2,1); }
+        .card:hover{ transform:translateY(-4px) scale(1.01); box-shadow:0 25px 60px rgba(0,0,0,.12); }
+        .fade-in{ animation:fade .45s ease; }
+        @keyframes fade{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+        .glass{ background:rgba(255,255,255,.75); backdrop-filter:blur(18px); border-top:1px solid rgba(0,0,0,.06); }
+        .btn-premium{ background:linear-gradient(135deg,#ff7a18,#ff5200); box-shadow:0 18px 40px rgba(255,115,0,.25); }
+        .btn-premium:hover{ transform:translateY(-1px); box-shadow:0 22px 50px rgba(255,115,0,.35); }
+    </style>
 </head>
 
 <body class="pb-44">
 
 <nav class="sticky top-0 z-50 px-6 py-5 bg-white/70 backdrop-blur-xl border-b border-gray-100 flex justify-between items-center">
-    <a href="/menu/{{ session.get('lokanta_slug') }}/{{ session.get('masa_no') }}" 
+    <a href="/m/{{ session.get('lokanta_uuid') }}/{{ session.get('masa_no') }}" 
        onclick="event.preventDefault(); window.location.replace(this.href);" 
        class="w-11 h-11 rounded-full bg-gray-100 hover:bg-orange-500 hover:text-white transition flex items-center justify-center text-gray-600">
         <i class="fa-solid fa-chevron-left"></i>
@@ -42,7 +39,7 @@ background:linear-gradient(180deg,#f8fafc,#eef2f7);
     <div class="space-y-5">
         {% for item in sepet %}
         <div class="card fade-in bg-white rounded-3xl p-4 border border-gray-100 flex gap-4 relative">
-            <a href="/sepet-sil/{{ loop.index0 }}" 
+            <a href="/m/{{ session.get('lokanta_uuid') }}/sepet-sil/{{ loop.index0 }}" 
                onclick="event.preventDefault(); window.location.replace(this.href);" 
                class="absolute -top-2 -right-2 w-10 h-10 bg-red-100 hover:bg-red-500 hover:text-white text-red-400 rounded-full flex items-center justify-center transition">
                 <i class="fa-solid fa-xmark text-xs"></i>
@@ -78,7 +75,7 @@ background:linear-gradient(180deg,#f8fafc,#eef2f7);
             <i class="fa-solid fa-cart-plus text-6xl"></i>
         </div>
         <h2 class="text-2xl font-extrabold text-gray-800 mb-2">Sepetin Boş</h2>
-        <a href="/menu/{{ session.get('lokanta_slug') }}/{{ session.get('masa_no') }}" onclick="event.preventDefault(); window.location.replace(this.href);" class="btn-premium text-white px-12 py-4 rounded-2xl font-bold transition active:scale-95">Menüye Git</a>
+        <a href="/m/{{ session.get('lokanta_uuid') }}/{{ session.get('masa_no') }}" onclick="event.preventDefault(); window.location.replace(this.href);" class="btn-premium text-white px-12 py-4 rounded-2xl font-bold transition active:scale-95">Menüye Git</a>
     </div>
     {% endif %}
 </main>
@@ -103,21 +100,22 @@ background:linear-gradient(180deg,#f8fafc,#eef2f7);
     const orderForm = document.getElementById('orderForm');
     if (orderForm) {
         orderForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Geçmişe kayıt atmasını engelle
+            e.preventDefault();
             
             const btn = document.getElementById('orderBtn');
+            const uuid = "{{ session.get('lokanta_uuid') }}";
+            
             btn.disabled = true;
             btn.innerText = "Gönderiliyor...";
 
-            fetch('/siparisi-tamamla', {
+            // SİPARİŞ TAMAMLAMA URL'Sİ GÜNCELLENDİ
+            fetch(`/m/${uuid}/siparisi-tamamla`, {
                 method: 'POST'
             })
             .then(response => {
                 if(response.ok) {
-                    // Sipariş bitince ana menüye tertemiz (replace) dön
-                    // İstersen burayı /siparis-basarili gibi bir sayfaya da yönlendirebilirsin
                     alert("Siparişiniz mutfağa iletildi!");
-                    window.location.replace("/menu/{{ session.get('lokanta_slug') }}/{{ session.get('masa_no') }}");
+                    window.location.replace(`/m/${uuid}/{{ session.get('masa_no') }}`);
                 } else {
                     alert("Sipariş verilemedi!");
                     btn.disabled = false;

@@ -62,7 +62,7 @@
             {% set stokta = u.stokta_mi != false %}
             
             <div data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
-                <a href="{% if stokta %}/urun/{{ u.id }}{% else %}javascript:void(0){% endif %}" onclick="event.preventDefault(); window.location.replace(this.href);"
+                <a href="{% if stokta %}/m/{{ session.get('lokanta_uuid') }}/urun/{{ u.id }}{% else %}javascript:void(0){% endif %}" onclick="event.preventDefault(); window.location.replace(this.href);"
                    class="grid-card relative flex flex-col bg-white rounded-[28px] overflow-hidden shadow-sm h-full {% if not stokta %}is-out{% endif %}">
                     
                     <div class="relative w-full aspect-square overflow-hidden">

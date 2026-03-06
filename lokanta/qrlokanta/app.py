@@ -6,9 +6,9 @@ from psycopg2.extras import RealDictCursor
 import qrcode
 import io
 import base64
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit,join_room
 from dotenv import load_dotenv
-from psycopg2.extras import RealDictCursor
+import uuid
 
 app = Flask(__name__)
 app.secret_key = 'gizli_anahtar_gastropro'
@@ -25,7 +25,6 @@ os.makedirs(QR_FOLDER, exist_ok=True)
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "1234"
-
 
 load_dotenv()
 
@@ -47,15 +46,12 @@ try:
     cur = conn.cursor()
     cur.execute('SELECT ad FROM lokantalar;')
     lokanta = cur.fetchone()
-    print(f"Bağlantı Başarılı! Lokanta Adı: {lokanta['ad']}")
+    if lokanta:
+        print(f"Bağlantı Başarılı! Lokanta Adı: {lokanta['ad']}")
     cur.close()
     conn.close()
 except Exception as e:
     print(f"Eyvah bağlantı patladı! Hata: {e}")
-
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(QR_FOLDER, exist_ok=True)
 
 
 def login_required(f):
@@ -124,24 +120,25 @@ def super_dashboard():
 @super_admin_required
 def super_lokanta_ekle():
     ad = request.form.get("ad")
+    gizli_kod = str(uuid.uuid4())[:8]
     eposta = request.form.get("eposta")
     sifre = request.form.get("sifre")
     masa_sayisi = request.form.get("masa_sayisi", 1)
     
-    # URL için slug oluşturma (Türkçe karakterleri temizler, boşlukları tire yapar)
+    # DB hata vermesin diye slug da oluşturuyoruz ama artık yönlendirmelerde kullanmıyoruz
     import re
     slug = ad.lower()
     tr_map = str.maketrans("çğıöşü ", "cgiosu-")
     slug = slug.translate(tr_map)
-    slug = re.sub(r'[^a-z0-9-]', '', slug) # Sadece harf, rakam ve tire bırak
+    slug = re.sub(r'[^a-z0-9-]', '', slug)
     
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
-            INSERT INTO lokantalar (ad, eposta, sifre, slug, masa_sayisi, aktif_mi) 
-            VALUES (%s, %s, %s, %s, %s, TRUE)
-        """, (ad, eposta, sifre, slug, masa_sayisi))
+            INSERT INTO lokantalar (ad, eposta, sifre, slug, masa_sayisi, aktif_mi, uuid) 
+            VALUES (%s, %s, %s, %s, %s, TRUE, %s)
+        """, (ad, eposta, sifre, slug, masa_sayisi, gizli_kod))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -165,23 +162,19 @@ def qr_bas_sayfasi(id):
     if not lokanta:
         return "Lokanta bulunamadı", 404
 
-    # QR'ları depolayacağımız liste
     qr_kodlar = []
     
-    # Masa sayısı kadar QR üret
+    # Masa sayısı kadar QR üret (ARTIK UUID İLE!)
     for i in range(1, lokanta['masa_sayisi'] + 1):
-        # Müşterinin gideceği asıl link (masa nosu ile beraber)
-        # Örn: https://seninsiten.com/menu/donercimahmut?masa=1
-        ipadres="http://46.225.230.249"
-        url = f"{ipadres}/menu/{lokanta['slug']}/{i}"
+        ipadres = "http://46.225.230.249"
+        # SLUG YERİNE UUID KULLANILIYOR
+        url = f"{ipadres}/m/{lokanta['uuid']}/{i}"
         
-        # QR Kod Oluşturma
         qr = qrcode.QRCode(version=1, box_size=10, border=2)
         qr.add_data(url)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Görseli belleğe kaydet ve base64 formatına çevir (HTML'de göstermek için)
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -195,29 +188,25 @@ def qr_bas_sayfasi(id):
 
 # --- LOKANTAYA SIZMA AKSİYONU ---
 @app.route('/super-admin/lokantaya-siz/<int:lokanta_id>')
-@super_admin_required  # Bu senin yukarıda tanımladığın decorator, giriş yapılmadıysa login'e atar.
+@super_admin_required
 def lokantaya_siz(lokanta_id):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Seçtiğin lokantayı veritabanından bul
-    cur.execute("SELECT id, ad, slug FROM lokantalar WHERE id = %s", (lokanta_id,))
+    cur.execute("SELECT id, ad, uuid FROM lokantalar WHERE id = %s", (lokanta_id,))
     lokanta = cur.fetchone()
     cur.close()
     conn.close()
 
     if lokanta:
-        # --- KRİTİK: KİMLİK DEĞİŞİMİ ---
-        # Lokantacı panelinin (@app.route("/admin")) beklediği session verilerini dolduruyoruz.
         session["admin_logged_in"] = True
         session["lokanta_id"] = lokanta['id']
         session["lokanta_ad"] = lokanta['ad']
-        session["lokanta_slug"] = lokanta['slug'] # Menü yönlendirmeleri için bu da lazım olabilir
-        
-        # İşlem tamam, şimdi normal admin paneline fırlatıyoruz
+        session["lokanta_uuid"] = lokanta['uuid'] 
         return redirect("/admin") 
     
     return "Hata: Lokanta bulunamadı!", 404
+
 #-------------------------------------------------------------------------------
 # GİRİŞ SAYFASI ROTASI
 @app.route("/login", methods=["GET", "POST"])
@@ -228,7 +217,6 @@ def login():
         
         conn = get_db_connection()
         cur = conn.cursor()
-        # Senin tablondaki eposta ve sifre sütunlarına göre sorguluyoruz
         cur.execute("SELECT * FROM lokantalar WHERE eposta = %s AND sifre = %s", (email, sifre))
         user = cur.fetchone()
         cur.close()
@@ -236,8 +224,9 @@ def login():
 
         if user:
             session["admin_logged_in"] = True
-            session["lokanta_id"] = user['id'] # EN KRİTİK NOKTA BURASI!
+            session["lokanta_id"] = user['id']
             session["lokanta_ad"] = user['ad']
+            session["lokanta_uuid"] = user['uuid'] # UUID SESSIONA EKLENDİ
             return redirect("/admin")
         else:
             return "Hatalı giriş bilgileri!"
@@ -249,36 +238,31 @@ def login():
 def logout():
     session.pop("admin_logged_in", None)
     return redirect("/login")
+
 #şifre_kurtarma
 @app.route("/sifremi-unuttum")
 def sifremi_unuttum():
-    # Burayı istersen bir HTML sayfasına bağla, 
-    # istersen direkt destek mesajına yönlendir.
     return render_template("sifre_destek.html")
 
 # ---------- ANA SAYFA ----------
 @app.route("/")
 def index():
-    l_slug = session.get("lokanta_slug")
-    m_no = session.get("masa_no") # Session'dan masa numarasını da alıyoruz
+    u_id = session.get("lokanta_uuid")
+    m_no = session.get("masa_no", 0) 
     
-    if l_slug and m_no:
-        # Müşteriyi tam adrese gönder: /menu/donercimahmut/3
-        return redirect(f"/menu/{l_slug}/{m_no}")
-    
-    # Eğer masa nosu yoksa ama slug varsa (nadiren olur) sadece menüye at
-    if l_slug:
-        return redirect(f"/menu/{l_slug}")
+    if u_id:
+        # Müşteriyi YENİ tam adrese gönder: /m/uuid/3
+        return redirect(f"/m/{u_id}/{m_no}")
         
     return redirect("/login")
 
-@app.route("/menu/<string:lokanta_slug>/<int:masa_no>")
-def home(lokanta_slug, masa_no=0):
+@app.route("/m/<string:u_id>/<int:masa_no>")
+def home(u_id, masa_no=0):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1. Slug'dan hangi lokantada olduğumuzu bulalım
-    cur.execute("SELECT * FROM lokantalar WHERE slug = %s", (lokanta_slug,))
+    # 1. UUID ile lokantayı bul
+    cur.execute("SELECT * FROM lokantalar WHERE uuid = %s", (u_id,))
     lokanta = cur.fetchone()
 
     if not lokanta:
@@ -286,10 +270,12 @@ def home(lokanta_slug, masa_no=0):
         conn.close()
         return "Böyle bir dükkan kayıtlı değil!", 404
 
-    # Artık bu dükkanın ID'sini session'a atabiliriz
+    # Session'a artık slug değil, uuid ve lokanta_id atıyoruz
     session["lokanta_id"] = lokanta['id']
     session["masa_no"] = masa_no
-    session["lokanta_slug"] = lokanta_slug
+    session["lokanta_uuid"] = u_id 
+    
+    lokanta_ad = lokanta['ad']
     
     # 2. Sadece BU lokantaya ait kategorileri al
     cur.execute("SELECT * FROM kategoriler WHERE lokanta_id = %s ORDER BY sira ASC", (lokanta['id'],))
@@ -308,7 +294,7 @@ def home(lokanta_slug, masa_no=0):
     cur.close()
     conn.close()
 
-    return render_template("home.html", lokanta=lokanta, kategoriler=kategoriler, urunler=urunler)
+    return render_template("home.html", lokanta=lokanta, kategoriler=kategoriler, urunler=urunler, lokanta_ad=lokanta_ad)
 
 # ---------- ADMIN PANEL ----------
 @app.route("/admin")
@@ -316,13 +302,11 @@ def admin_ana_panel():
     if not session.get("admin_logged_in"):
         return redirect("/login")
     
-    # Hangi lokanta giriş yaptıysa onun ID'sini alıyoruz
     l_id = session.get("lokanta_id")
     
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # SADECE BU LOKANTAYA AİT ÜRÜNLERİ ÇEK
     cur.execute("SELECT * FROM urunler WHERE lokanta_id = %s", (l_id,))
     urunler = cur.fetchall()
     
@@ -334,22 +318,17 @@ def admin_ana_panel():
 @app.route("/adminurunekle", methods=["GET", "POST"])
 @login_required
 def admin_urunekle():
-    # Session'dan lokanta_id'yi alıyoruz. Giriş yapmamışsa zaten login_required yakalar.
     lokanta_id = session.get("lokanta_id")
     
     if not lokanta_id:
-        return redirect("/login") # Güvenlik önlemi
+        return redirect("/login") 
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     if request.method == "POST":
-        # ---------- KATEGORİ EKLEME (AJAX) ----------
         kategori_ad = request.form.get("kategori_ad")
         if kategori_ad:
-            # Burada 'ON CONFLICT (ad) DO NOTHING' tehlikelidir çünkü 
-            # Dönerci Mahmut'un 'İçecekler'i ile başkasınınki çakışabilir.
-            # Tabloda (ad, lokanta_id) şeklinde UNIQUE CONSTRAINT varsa çalışır.
             cur.execute("""
                 INSERT INTO kategoriler (ad, lokanta_id) 
                 VALUES (%s, %s) 
@@ -360,13 +339,11 @@ def admin_urunekle():
             conn.close()
             return "OK", 200
 
-        # ---------- ÜRÜN EKLEME ----------
         ad = request.form["ad"]
         fiyat = float(request.form["fiyat"])
         icerik = request.form["icerik"]
         kategori_id = request.form.get("kategori")
 
-        # Resim Kaydet
         file = request.files.get("resim")
         if file and file.filename != '':
             filename = file.filename
@@ -374,7 +351,6 @@ def admin_urunekle():
         else:
             filename = "default.jpg"
 
-        # 1. ÜRÜNÜ KAYDET (Sadece bu lokantaya bağlı olarak)
         cur.execute("""
             INSERT INTO urunler (ad, fiyat, kategori_id, fotograf_url, aciklama, lokanta_id)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -383,7 +359,6 @@ def admin_urunekle():
         
         yeni_urun_id = cur.fetchone()['id']
 
-        # 2. EKSTRALARI AL VE KAYDET
         ekstra_adlar = request.form.getlist("ekstra_ad[]")
         ekstra_fiyatlar = request.form.getlist("ekstra_fiyat[]")
         
@@ -401,7 +376,6 @@ def admin_urunekle():
         conn.close()
         return redirect("/admin/urunlerim")
 
-    # GET İsteği: Sadece GİRİŞ YAPAN lokantanın kategorilerini çek
     cur.execute("SELECT * FROM kategoriler WHERE lokanta_id = %s ORDER BY ad ASC", (lokanta_id,))
     kategoriler = cur.fetchall()
     cur.close()
@@ -410,7 +384,7 @@ def admin_urunekle():
 
 
 @app.route("/admin/sifre-degistir", methods=["GET", "POST"])
-@login_required # Sadece giriş yapmış lokantacı girebilir
+@login_required 
 def admin_sifre_degistir():
     if request.method == "POST":
         yeni_sifre = request.form.get("yeni_sifre")
@@ -425,8 +399,6 @@ def admin_sifre_degistir():
         try:
             cur.execute("UPDATE lokantalar SET sifre = %s WHERE id = %s", (yeni_sifre, lokanta_id))
             conn.commit()
-            # Şifre değişince güvenlik için tekrar login'e atalım mı? 
-            # İstersen atarız ama şimdilik panele geri gönderelim.
             return redirect("/admin")
         except Exception as e:
             conn.rollback()
@@ -436,17 +408,18 @@ def admin_sifre_degistir():
             cur.close()
             conn.close()
 
-    # GET isteği gelirse şifre değiştirme formunu göster
     return render_template("admin_sifre.html")
 
 # ---------- ÜRÜN DETAY ----------
-@app.route("/urun/<int:id>")
-def urun_detay(id):
+# ---------- ÜRÜN DETAY SAYFASI ----------
+@app.route("/m/<string:u_id>/urun/<int:urun_id>")
+def urun_detay(u_id, urun_id):
+    session['lokanta_uuid'] = u_id
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 1. Ürünün ana bilgilerini getir
-    cur.execute("SELECT * FROM urunler WHERE id = %s", (id,))
+    # 1. Ürünü çek
+    cur.execute("SELECT * FROM urunler WHERE id = %s", (urun_id,)) # Virgül eklendi
     urun = cur.fetchone()
     
     if not urun:
@@ -454,24 +427,25 @@ def urun_detay(id):
         conn.close()
         return "Ürün bulunamadı!", 404
         
-    # 2. Ürüne ait ekstraları getir (Yeni tablodan çekiyoruz!)
-    cur.execute("SELECT * FROM urun_ekstralar WHERE urun_id = %s", (id,))
+    # 2. Ekstraları çek
+    # BURASI ÇOK ÖNEMLİ: (urun_id,) şeklinde virgül şart!
+    cur.execute("SELECT * FROM urun_ekstralar WHERE urun_id = %s", (urun_id,)) 
     ekstralar = cur.fetchall()
     
     cur.close()
     conn.close()
     
-    # HTML tarafına hem ürünü hem de ekstraları gönderiyoruz
+    # urun.html şablonuna gönderiyoruz
     return render_template("urun.html", urun=urun, ekstralar=ekstralar)
 
 # ---------- KATEGORİ DETAY (Ürün Listesi) ----------
-@app.route("/kategori/<int:id>")
-def kategori_sayfasi(id):
+@app.route("/m/<string:u_id>/kategori/<int:kat_id>")
+def kategori_sayfasi(u_id, kat_id):
+    session['lokanta_uuid'] = u_id
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1. Seçilen kategorinin adını alalım (Başlıkta göstermek için)
-    cur.execute("SELECT ad FROM kategoriler WHERE id = %s", (id,))
+    cur.execute("SELECT ad FROM kategoriler WHERE id = %s", (kat_id,))
     kategori = cur.fetchone()
 
     if not kategori:
@@ -479,13 +453,13 @@ def kategori_sayfasi(id):
         conn.close()
         return "Kategori bulunamadı!", 404
 
-    # 2. Bu kategoriye ait ürünleri çekelim
-    # Sadece stokta olanları veya hepsini getirebilirsin, şimdilik hepsini çekiyoruz
+    # DİKKAT: Aşağıdaki (id,) kısmını (kat_id,) olarak değiştirdik.
     cur.execute("""
         SELECT * FROM urunler 
         WHERE kategori_id = %s 
         ORDER BY ad ASC
-    """, (id,))
+    """, (kat_id,)) # Burası düzeldi
+    
     urunler = cur.fetchall()
 
     cur.close()
@@ -493,95 +467,102 @@ def kategori_sayfasi(id):
     
     return render_template("kategori.html", urunler=urunler, kategori_ad=kategori['ad'])
 
-@app.route("/sepete-ekle", methods=["POST"])
-def sepete_ekle():
-    # 1. Sepet oturumu yoksa oluştur
+@app.route("/m/<string:u_id>/sepete-ekle", methods=["POST"])
+def sepete_ekle(u_id):
+    # UUID'yi session'da tazele
+    session['lokanta_uuid'] = u_id
+    
     if "sepet" not in session:
         session["sepet"] = []
     
-    # 2. Formdan gelen verileri yakala
+    # Form verilerini al
     urun_id = request.form.get("urun_id")
     ad = request.form.get("urun_ad")
-    # Gizli inputtan gelen (ürün + ekstralar dahil) toplam birim fiyat
-    fiyat = float(request.form.get("fiyat", 0)) 
+    fiyat = float(request.form.get("fiyat", 0).replace(',', '.')) # Virgül/Nokta hatasını önle
     adet = int(request.form.get("adet", 1))
     notum = request.form.get("not", "")
-    ekstralar = request.form.getlist("ekstra") # ['Sos:5', 'Peynir:10'] gibi liste gelir
+    ekstralar = request.form.getlist("ekstra") 
     resim = request.form.get("resim")
 
-    # 3. Seçilen ekstraları metne dök (Arayüzde şık görünmesi için: "Sos, Peynir")
     ekstra_metni = ""
     if ekstralar:
         ekstra_isimleri = [e.split(':')[0] for e in ekstralar]
         ekstra_metni = ", ".join(ekstra_isimleri)
 
-    # 4. Sepet objesini oluştur
     item = {
         "id": urun_id,
         "ad": ad,
-        "ekstra_detay": ekstra_metni, # Görsel amaçlı ("Sos, Peynir")
-        "fiyat": fiyat,               # Seçenekler dahil birim fiyat
+        "ekstra_detay": ekstra_metni,
+        "fiyat": fiyat,
         "adet": adet,
-        "toplam": fiyat * adet,       # Toplam tutar
-        "ekstra_ham": ",".join(ekstralar), # Veritabanına kaydetmek için ham hali ("Sos:5,Peynir:10")
+        "toplam": fiyat * adet,
+        "ekstra_ham": ",".join(ekstralar),
         "not": notum,
         "resim": resim
     }
     
-    # 5. Listeyi güncelle ve oturuma (Session) kaydet
     temp = session["sepet"]
     temp.append(item)
     session["sepet"] = temp
-    session.modified = True # Flask'ın değişikliği kesin kaydetmesini sağlar
+    session.modified = True 
     
-    return redirect("/sepet")
+    # REDIRECT YERİNE JSON DÖNDÜRÜYORUZ (JavaScript bunu bekliyor)
+    return jsonify({"success": True, "message": "Ürün sepete eklendi"})
 
 # --- 2. SEPET GÖRÜNTÜLEME ---
-@app.route("/sepet")
-def sepet():
-    # 1. Oturumdan sepeti al, eğer boşsa boş liste dön
+# ---------- SEPET SAYFASI ----------
+@app.route("/m/<string:u_id>/sepet")
+def sepet(u_id):
+    # Kullanıcının girdiği dükkan kodunu session'a yaz
+    session['lokanta_uuid'] = u_id
+    
+    # Sepeti al (yoksa boş liste)
     sepet_listesi = session.get("sepet", [])
     
-    # 2. Genel toplamı hesapla (Hassas hesaplama için float/decimal dikkat)
-    # item["toplam"] her ürünün (fiyat * adet) sonucudur
-    genel_toplam = sum(float(item["toplam"]) for item in sepet_listesi) if sepet_listesi else 0
+    # Genel toplamı hesapla (toplam değerlerin float olduğundan emin olalım)
+    genel_toplam = sum(float(item.get("toplam", 0)) for item in sepet_listesi)
     
-    # 3. Şablonu (template) gönder
-    # Toplamı iki basamaklı (0.00) formatta gönderirsek daha profesyonel durur
     return render_template("sepet.html", 
                            sepet=sepet_listesi, 
-                           toplam=f"{genel_toplam:.2f}")
+                           toplam=f"{genel_toplam:.2f}",
+                           u_id=u_id) # HTML tarafında linkler için lazım olacak
 
 # --- 3. SEPETTEN SİLME ---
-@app.route("/sepet-sil/<int:index>")
-def sepet_sil(index):
+@app.route("/m/<string:u_id>/sepet-sil/<int:index>")
+def sepet_sil(u_id, index):
+    # Dükkan kodunu (u_id) session'da güncelliyoruz
+    session['lokanta_uuid'] = u_id
+    
     if "sepet" in session:
-        # 1. Mevcut sepeti bir değişkene kopyala
         temp = session["sepet"]
-        
-        # 2. Index kontrolü yap (Hatalı bir index gelirse uygulama patlamasın)
+        # İndeks kontrolü
         if 0 <= index < len(temp):
-            # Ürünü listeden çıkar
             temp.pop(index)
-            
-            # 3. Güncellenmiş listeyi tekrar session'a ata
             session["sepet"] = temp
-            
-            # 4. KRİTİK: Flask'a sepetin değiştiğini zorla bildir
             session.modified = True
             
-    # Silme işleminden sonra tekrar sepet sayfasına dön
-    return redirect("/sepet")
+    # İşlem bittiğinde aynı dükkanın sepet sayfasına yönlendir
+    return redirect(f"/m/{u_id}/sepet")
+
+@socketio.on('join_room')
+def on_join(data):
+    room = data['room']
+    join_room(room)
+    print(f"--> [SOCKET] Kasa {room} odasına katıldı.")
 
 # --- 4. SİPARİŞİ TAMAMLA (KASAYA GÖNDER) ---
-@app.route("/siparisi-tamamla", methods=["POST"])
-def siparisi_tamamla():
+@app.route("/m/<string:u_id>/siparisi-tamamla", methods=["POST"])
+def siparisi_tamamla(u_id):
+    # UUID ile dükkanı sabitle
+    session['lokanta_uuid'] = u_id
+    
     sepet_listesi = session.get("sepet", [])
     masa = session.get("masa_no", "Bilinmiyor")
     lokanta_id = session.get("lokanta_id")
 
     if not sepet_listesi:
-        return redirect("/")
+        # Sepet boşsa menüye geri gönder
+        return redirect(f"/m/{u_id}/{masa}")
 
     genel_toplam = sum(float(item["toplam"]) for item in sepet_listesi)
 
@@ -589,12 +570,7 @@ def siparisi_tamamla():
     cur = conn.cursor()
 
     try:
-        # 1. Lokanta bilgilerini al (Sarı çizgiyi ve slug sorununu çözer)
-        cur.execute("SELECT slug FROM lokantalar WHERE id = %s", (lokanta_id,))
-        lokanta_verisi = cur.fetchone()
-        taze_slug = lokanta_verisi['slug'] if lokanta_verisi else "bilinmiyor"
-
-        # 2. Ana Siparişi Kaydet
+        # 1. Ana Siparişi Kaydet
         cur.execute("""
             INSERT INTO siparisler (masa_no, toplam_tutar, durum, lokanta_id)
             VALUES (%s, %s, %s, %s)
@@ -603,7 +579,7 @@ def siparisi_tamamla():
         
         ana_siparis_id = cur.fetchone()['id']
 
-        # 3. Sipariş Detaylarını Ekle
+        # 2. Sipariş Detaylarını Ekle
         for item in sepet_listesi:
             cur.execute("""
                 INSERT INTO siparis_detay 
@@ -619,18 +595,15 @@ def siparisi_tamamla():
                 item.get("ekstra_ham", "")
             ))
 
-        # 4. Veritabanı Onayı (Commit)
         conn.commit()
         
-        # 5. KASAYA BİLDİRİM GÖNDER (Kritik Düzeltme!)
-        # Şimdilik oda (room) kısmını kaldırıyoruz ki tüm bağlı kasalar direkt duysun.
-        # Terminalde görmek için bir de print ekledim.
-        print(f"--> [SOCKET] Masa {masa} için sipariş bildirimi gönderiliyor...")
-        socketio.emit('yeni_siparis', {'masa': masa})
+        # 3. KASAYA BİLDİRİM GÖNDER
+        # Odayı UUID (u_id) olarak kullanman daha güvenli olur
+        socketio.emit('yeni_siparis', {'masa': masa}, room=u_id)
 
-        # 6. Sepeti temizle ve yönlendir
+        # 4. Sepeti temizle ve onay sayfasına yönlendir
         session.pop("sepet", None)
-        return render_template("siparis_onay.html", l_slug=taze_slug, m_no=masa)
+        return render_template("siparis_onay.html", u_id=u_id, m_no=masa)
 
     except Exception as e:
         if conn:
@@ -638,16 +611,13 @@ def siparisi_tamamla():
         print(f"!!! Sipariş hatası: {e}")
         return "Sipariş verilirken bir hata oluştu!", 500
     finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
+        if cur: cur.close()
+        if conn: conn.close()
         
-# ---------- SİPARİŞ ----------
+# ---------- KASA ----------
 @app.route("/admin/kasa")
 @login_required
 def kasa_paneli():
-    # Kasiyerin önüne boş sayfa gelir, içindeki JS birazdan API'ye istek atıp veriyi doldurur
     return render_template("kasa.html")
 
 @app.route("/api/kasa_verisi")
@@ -661,7 +631,6 @@ def kasa_verisi():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 1. DEĞİŞİKLİK: Filtreye 'Garson Çağırıyor' durumunu da ekledik
     cur.execute("""
         SELECT * FROM siparisler 
         WHERE lokanta_id = %s AND durum IN ('Beklemede', 'Garson Çağırıyor') 
@@ -690,12 +659,11 @@ def kasa_verisi():
                 "fiyat": float(u['fiyat']) if u['fiyat'] else 0
             })
 
-        # 2. DEĞİŞİKLİK: Durum bilgisini de pakete ekliyoruz ki JS tarafa "Bu garson çağrısıdır" diyebilelim
         sonuc.append({
             "id": s['id'],
             "masa_no": s['masa_no'],
             "toplam_tutar": float(s['toplam_tutar']),
-            "durum": s['durum'], # BU ÇOK ÖNEMLİ!
+            "durum": s['durum'], 
             "tarih": s['tarih'].strftime('%H:%M'),
             "urunler": urunler_listesi 
         })
@@ -711,18 +679,15 @@ def urun_duzenle_sayfasi(id):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # 1. Ürün bilgilerini çek
     cur.execute("SELECT * FROM urunler WHERE id = %s AND lokanta_id = %s", (id, session.get("lokanta_id", 1)))
     urun = cur.fetchone()
     
     if not urun:
         return "Ürün bulunamadı!", 404
 
-    # 2. Bu ürüne ait ekstraları çek
     cur.execute("SELECT ekstra_ad, ekstra_fiyat FROM urun_ekstralar WHERE urun_id = %s", (id,))
-    ekstralar = cur.fetchall() # Bu bize liste döner: [{'ekstra_ad': 'Sos', 'ekstra_fiyat': 5}, ...]
+    ekstralar = cur.fetchall() 
 
-    # 3. Tüm kategorileri çek (Select box için)
     cur.execute("SELECT * FROM kategoriler WHERE lokanta_id = %s", (session.get("lokanta_id", 1),))
     kategoriler = cur.fetchall()
     
@@ -731,19 +696,15 @@ def urun_duzenle_sayfasi(id):
     
     return render_template("admin_urunekle.html", urun=urun, kategoriler=kategoriler, ekstralar=ekstralar)
 
-import os
-
 @app.route("/urun-guncelle/<int:id>", methods=["POST"])
 @login_required
 def urun_guncelle(id):
-    # 1. Form Verilerini Al
     ad = request.form.get("ad")
     fiyat = float(request.form.get("fiyat", 0))
     icerik = request.form.get("icerik", "")
     kategori_id = request.form.get("kategori")
     stokta_mi = True if request.form.get("stok") == "1" else False
 
-    # Ekstra listelerini al (urun_ekstra tablosuna gidecekler)
     ekstra_adlar = request.form.getlist("ekstra_ad[]")
     ekstra_fiyatlar = request.form.getlist("ekstra_fiyat[]")
 
@@ -751,7 +712,6 @@ def urun_guncelle(id):
     cur = conn.cursor()
     
     try:
-        # 2. Resim İşlemleri
         cur.execute("SELECT fotograf_url FROM urunler WHERE id=%s", (id,))
         eski_resim = cur.fetchone()["fotograf_url"]
         
@@ -762,21 +722,17 @@ def urun_guncelle(id):
         else:
             filename = eski_resim
 
-        # 3. Ana Ürünü Güncelle (urunler tablosu)
         cur.execute("""
             UPDATE urunler 
             SET ad=%s, fiyat=%s, kategori_id=%s, fotograf_url=%s, aciklama=%s, stokta_mi=%s
             WHERE id=%s AND lokanta_id=%s
         """, (ad, fiyat, int(kategori_id), filename, icerik, stokta_mi, id, session.get("lokanta_id", 1)))
 
-        # 4. EKSTRALARI DÜZENLE (urun_ekstra tablosu)
-        # Önce bu ürünün tüm eski ekstralarını silelim
         cur.execute("DELETE FROM urun_ekstralar WHERE urun_id = %s", (id,))
 
-        # Şimdi formdan gelenleri tek tek ekleyelim
         for i in range(len(ekstra_adlar)):
             e_ad = ekstra_adlar[i].strip()
-            if e_ad: # İsim boş değilse ekle
+            if e_ad: 
                 e_fiyat = float(ekstra_fiyatlar[i]) if ekstra_fiyatlar[i] else 0.0
                 cur.execute("""
                     INSERT INTO urun_ekstralar (urun_id, ekstra_ad, ekstra_fiyat)
@@ -801,11 +757,9 @@ def admin_urunlerim_sayfasi():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Önce kategorileri alalım
     cur.execute("SELECT * FROM kategoriler WHERE lokanta_id = %s ORDER BY sira ASC", (l_id,))
     kategoriler = cur.fetchall()
 
-    # Sonra ürünleri kategorisiyle beraber alalım
     cur.execute("""
         SELECT u.*, k.ad as kat_ad 
         FROM urunler u 
@@ -820,7 +774,6 @@ def admin_urunlerim_sayfasi():
     
     return render_template("admin_urunlerim.html", kategoriler=kategoriler, urunler=urunler)
 
-
 @app.route("/garson-cagir")
 def garson_cagir():
     masa_no = session.get('masa_no', 'Test-1')
@@ -830,7 +783,6 @@ def garson_cagir():
     cur = conn.cursor()
     
     try:
-        # Tek bir INSERT yeterli. Detay tablosuna girmeye gerek yok.
         cur.execute("""
             INSERT INTO siparisler (lokanta_id, masa_no, toplam_tutar, durum) 
             VALUES (%s, %s, %s, %s)
@@ -838,7 +790,7 @@ def garson_cagir():
         
         conn.commit()
         print(f"🔔 Masa {masa_no} için garson çağrısı başarıyla kaydedildi.")
-        socketio.emit('yeni_siparis', {'data': 'Garson Çağrısı'}, namespace='/') # KASAYI UYAR!
+        socketio.emit('yeni_siparis', {'data': 'Garson Çağrısı'}, namespace='/')
         return "OK", 200
         
     except Exception as e:
@@ -848,7 +800,7 @@ def garson_cagir():
     finally:
         cur.close()
         conn.close()
-# Siparişi "Tamamlandı" olarak işaretlemek için küçük bir buton yolu
+
 @app.route("/api/siparis-tamamla/<int:id>", methods=["POST", "GET"])
 def api_siparis_tamamla(id):
     l_id = session.get("lokanta_id")
@@ -860,8 +812,6 @@ def api_siparis_tamamla(id):
     cur = conn.cursor()
     
     try:
-        # 1. Veritabanını güncelle: Siparişi 'Tamamlandı' yap
-        # lokanta_id kontrolü ekliyoruz ki kimse başkasının siparişini kapatamasın
         cur.execute("""
             UPDATE siparisler 
             SET durum = 'Tamamlandı' 
@@ -869,10 +819,6 @@ def api_siparis_tamamla(id):
         """, (id, l_id))
         
         conn.commit()
-
-        # 2. SOKET BİLDİRİMİ (Opsiyonel): 
-        # Eğer SocketIO kullanıyorsan, listeyi herkes için yeniletmek istersen:
-        # socketio.emit('siparis_guncellendi', {'lokanta_id': l_id})
 
         return jsonify({"success": True, "message": "Sipariş teslim edildi!"})
 
@@ -884,7 +830,6 @@ def api_siparis_tamamla(id):
     finally:
         cur.close()
         conn.close()
-# ---------- QR ----------
+
 if __name__ == '__main__':
-    # Sunucuda debug=False olmalı
     socketio.run(app, debug=False, host='0.0.0.0', port=5000)

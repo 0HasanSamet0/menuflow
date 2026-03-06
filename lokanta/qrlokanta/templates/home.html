@@ -53,9 +53,16 @@
 <body class="pb-32" onload="kilidiBaslat()"> 
 
     <nav class="flex justify-between items-center px-6 py-4 sticky top-0 z-50 glass-header border-b border-slate-100">
-        <div class="flex flex-col">
-            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em]">Hoş Geldiniz</span>
-            <h1 class="text-xl font-800 tracking-tighter text-slate-900">GUSTO<span class="text-orange-500">PRO</span></h1>
+        <div class="flex flex-col space-y-1">
+            <span class="text-[11px] font-black text-orange-500/80 uppercase tracking-[0.4em] leading-none">
+                Hoş Geldiniz
+            </span>
+            
+            <h1 class="text-3xl md:text-4xl font-800 text-slate-800 tracking-tight leading-tight uppercase">
+                {{ lokanta_ad }}
+            </h1>
+            
+            <div class="w-10 h-[3px] bg-gradient-to-r from-orange-500 to-transparent rounded-full mt-1"></div>
         </div>
         
         <a href="/sepet" onclick="event.preventDefault(); window.location.replace(this.href);" class="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 active:scale-90 transition-all">
@@ -85,7 +92,10 @@
 
         <div class="grid grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.2s;">
             {% for k in kategoriler %}
-            <a href="/kategori/{{ k.id }}" onclick="event.preventDefault(); window.location.replace(this.href);" class="kat-card group rounded-[2.5rem] p-6 shadow-sm shadow-slate-200/50">
+            <a href="/m/{{ session.get('lokanta_uuid') }}/kategori/{{ k.id }}" 
+               onclick="event.preventDefault(); window.location.replace(this.href);" 
+               class="kat-card group rounded-[2.5rem] p-6 shadow-sm shadow-slate-200/50">
+               
                 <div class="w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500
                     {% if 'İçecek' in k.ad %}icon-bg-blue
                     {% elif 'Tatlı' in k.ad %}icon-bg-pink

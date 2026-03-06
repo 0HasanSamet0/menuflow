@@ -17,9 +17,23 @@
 </head>
 <body class="flex items-center justify-center min-h-screen p-6">  
     <div class="max-w-4xl w-full">
-        <header class="text-center mb-12">
-            <h1 class="text-5xl font-900 text-slate-900 tracking-tighter">YÖNETİM <span class="text-orange-500">PANELİ</span></h1>
-            <p class="text-slate-400 mt-2 font-medium">Lütfen yapmak istediğiniz işlemi seçin</p>
+        <header class="flex flex-col md:flex-row md:items-end justify-between border-b border-slate-100 pb-8 mb-12 gap-6">
+            <div class="flex flex-col">
+                <span class="text-[10px] font-black text-orange-500 uppercase tracking-[0.3em] mb-1">İşletme</span>
+                <h1 class="text-3xl md:text-4xl font-900 text-slate-900 tracking-tight uppercase">
+                    {{ lokanta_ad }}
+                </h1>
+                <div class="w-8 h-1 bg-orange-500 rounded-full mt-2"></div>
+            </div>
+        
+            <div class="flex flex-col md:items-end text-left md:text-right">
+                <h2 class="text-xl md:text-2xl font-800 text-slate-400 tracking-tighter uppercase">
+                    YÖNETİM <span class="text-slate-900">PANELİ</span>
+                </h2>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-widest mt-1">
+                    İşlem Merkezi
+                </p>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

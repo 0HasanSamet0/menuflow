@@ -38,12 +38,14 @@
 <body class="pb-40">
 
     <nav class="fixed top-0 left-0 right-0 z-50 p-6 flex justify-between items-center">
-        <a href="/kategori/{{ urun.kategori_id }}" onclick="event.preventDefault(); window.location.replace(this.href);" 
+        <a href="/m/{{ session.get('lokanta_uuid') }}/kategori/{{ urun.kategori_id }}" 
+           onclick="event.preventDefault(); window.location.replace(this.href);" 
            class="w-11 h-11 flex items-center justify-center bg-white border border-gray-100 rounded-full shadow-sm active:scale-90 transition">
             <i class="fa-solid fa-arrow-left text-gray-900"></i>
         </a>
         <h2 class="text-sm font-800 uppercase tracking-[0.2em] text-gray-400">Detaylar</h2>
-        <div class="w-11 h-11"></div> </nav>
+        <div class="w-11 h-11"></div> 
+    </nav>
 
     <div class="relative w-full h-[40vh] bg-[#fdfdfd] flex items-center justify-center p-10">
         <img src="/static/uploads/{{ urun.fotograf_url }}" 
@@ -150,29 +152,36 @@
         }
 
         function formuGonder() {
-            const submitBtn = document.getElementById('submitBtn');
-            const form = document.getElementById('sepetForm');
-            const formData = new FormData(form);
-            formData.append('adet', qtyInput.value);
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('sepetForm');
+    const formData = new FormData(form);
+    formData.append('adet', qtyInput.value);
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-white"></i>';
+    const uuid = "{{ session.get('lokanta_uuid') }}"; // Flask'tan gelen UUID
 
-            fetch('/sepete-ekle', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if(response.ok) {
-                    submitBtn.innerHTML = '<i class="fa-solid fa-check text-white"></i>';
-                    setTimeout(() => window.location.replace("/sepet"), 500);
-                }
-            })
-            .catch(err => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'HATA';
-            });
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-white"></i>';
+
+    // Dinamik URL: /m/UUID/sepete-ekle
+    fetch(`/m/${uuid}/sepete-ekle`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if(response.ok) {
+            submitBtn.innerHTML = '<i class="fa-solid fa-check text-white"></i>';
+            // Dinamik Yönlendirme: /m/UUID/sepet
+            setTimeout(() => window.location.replace(`/m/${uuid}/sepet`), 500);
+        } else {
+            throw new Error("Hata oluştu");
         }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span class="text-xs font-bold">TEKRAR DENE</span>';
+        console.error(err);
+    });
+}
     </script>
 </body>
 </html>

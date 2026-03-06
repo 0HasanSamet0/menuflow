@@ -65,14 +65,19 @@
             <div class="w-10 h-[3px] bg-gradient-to-r from-orange-500 to-transparent rounded-full mt-1"></div>
         </div>
         
-        <a href="/sepet" onclick="event.preventDefault(); window.location.replace(this.href);" class="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 active:scale-90 transition-all">
-            <i class="fa-solid fa-basket-shopping text-slate-700 text-lg"></i>
-            {% if session.get('sepet') %}
-            <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
-                {{ session.get('sepet')|length }}
-            </span>
-            {% endif %}
-        </a>
+        <a href="/m/{{ session.get('lokanta_uuid') }}/sepet" 
+   onclick="event.preventDefault(); window.location.href=this.href;" 
+   class="relative w-12 h-12 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 active:scale-90 transition-all">
+    
+    <i class="fa-solid fa-basket-shopping text-slate-700 text-lg"></i>
+    
+    {# Sepet boş değilse ve uzunluğu 0'dan büyükse rozeti göster #}
+    {% if session.get('sepet') and session.get('sepet')|length > 0 %}
+    <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+        {{ session.get('sepet')|length }}
+    </span>
+    {% endif %}
+</a>
     </nav>
 
     <main class="px-6 mt-8 max-w-lg mx-auto">

@@ -166,7 +166,7 @@ def qr_bas_sayfasi(id):
     
     # Masa sayısı kadar QR üret (ARTIK UUID İLE!)
     for i in range(1, lokanta['masa_sayisi'] + 1):
-        ipadres = "http://46.225.230.249"
+        ipadres = "https://menuflw.com"
         # SLUG YERİNE UUID KULLANILIYOR
         url = f"{ipadres}/m/{lokanta['uuid']}/{i}"
         

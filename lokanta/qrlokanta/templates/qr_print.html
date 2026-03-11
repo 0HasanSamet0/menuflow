@@ -2,40 +2,118 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>{{ lokanta.ad }} - QR Kodları</title>
+    <title>{{ lokanta.ad }} - Premium QR Baskı</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        body { font-family: 'Poppins', sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        
+        /* Kartın ana yapısı - Taşmayı önleyen bölmeli sistem */
+        .qr-card {
+            display: grid;
+            grid-template-rows: 100px 1fr 90px; /* İsim, QR, Masa No alanları sabitlendi */
+            height: 380px;
+            overflow: hidden;
+        }
+
+        .manual-name { white-space: pre-line; word-break: break-word; line-height: 1.1; }
+
         @media print {
-            .no-print { display: none; }
-            body { background: white; }
-            .qr-card { break-inside: avoid; }
+            .no-print { display: none !important; }
+            body { background: white; padding: 0 !important; margin: 0 !important; }
+            .print-grid { 
+                display: grid !important; 
+                grid-template-columns: repeat(3, 1fr) !important; 
+                gap: 10px !important; 
+                padding: 10px !important;
+            }
+            .qr-card { border: 1px solid #eee !important; box-shadow: none !important; }
         }
     </style>
 </head>
-<body class="bg-slate-100 p-8">
+<body class="bg-slate-200 p-4 md:p-10">
 
-    <div class="max-w-5xl mx-auto">
-        <div class="no-print bg-slate-800 text-white p-6 rounded-2xl mb-8 flex justify-between items-center shadow-lg">
-            <div>
-                <h1 class="text-2xl font-bold">{{ lokanta.ad }} Baskı Paneli</h1>
-                <p class="text-slate-400 text-sm">Toplam {{ qr_kodlar|length }} masa için QR oluşturuldu.</p>
+    <div class="max-w-6xl mx-auto no-print bg-white shadow-2xl rounded-[2rem] overflow-hidden mb-10 border-b-8 border-orange-500">
+        <div class="p-8 grid md:grid-cols-12 gap-8 items-center">
+            <div class="md:col-span-5">
+                <h2 class="text-xs font-black text-orange-500 uppercase tracking-widest mb-2">İçerik Düzenleme</h2>
+                <textarea id="nameInput" rows="2" 
+                    class="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 text-slate-800 font-bold focus:ring-4 focus:ring-orange-100 focus:border-orange-500 outline-none transition-all text-lg"
+                    placeholder="Lokanta ismini buraya yaz (Enter ile alt satıra geç)...">{{ lokanta.ad }}</textarea>
             </div>
-            <button onclick="window.print()" class="bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-xl font-bold transition-all">
-                <i class="fa-solid fa-print"></i> YAZDIR / PDF YAP
-            </button>
-        </div>
+            
+            <div class="md:col-span-4">
+                <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Yazı Boyutu</h2>
+                <input type="range" id="sizeSlider" min="12" max="30" value="20" 
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                <div class="flex justify-between text-[10px] font-bold text-slate-400 mt-2 uppercase">
+                    <span>Küçük</span>
+                    <span>Orta</span>
+                    <span>Büyük</span>
+                </div>
+            </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="md:col-span-3 flex justify-end">
+                <button onclick="window.print()" class="w-full bg-slate-900 hover:bg-black text-white px-6 py-5 rounded-2xl font-black transition-all shadow-xl flex items-center justify-center gap-3">
+                    <span class="text-xl">🖨️</span> YAZDIRMAYA HAZIRLA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 print-grid gap-6">
             {% for qr in qr_kodlar %}
-            <div class="qr-card bg-white p-6 rounded-2xl border-2 border-dashed border-slate-200 text-center shadow-sm">
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">GUSTO PRO</div>
-                <img src="data:image/png;base64,{{ qr.qr_base64 }}" class="w-full h-auto mx-auto mb-4" alt="Masa {{ qr.masa_no }}">
-                <div class="font-black text-2xl text-slate-800">MASA {{ qr.masa_no }}</div>
-                <div class="text-[10px] text-slate-500 mt-2 italic">{{ lokanta.ad }}</div>
+            <div class="qr-card bg-white rounded-[2.5rem] shadow-xl border-4 border-white relative">
+                
+                <div class="flex items-center justify-center p-4 text-center border-b border-slate-50 bg-slate-50/50">
+                    <h2 class="dynamic-name manual-name font-black text-slate-900 uppercase tracking-tight" 
+                        style="font-size: 20px;">
+                        {{ lokanta.ad }}
+                    </h2>
+                </div>
+
+                <div class="flex flex-col items-center justify-center p-2">
+                    <div class="relative group">
+                        <div class="absolute -inset-2 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-3xl opacity-10"></div>
+                        <div class="relative p-3 bg-white rounded-2xl border border-slate-100">
+                            <img src="data:image/png;base64,{{ qr.qr_base64 }}" class="w-32 h-32 object-contain" alt="Masa {{ qr.masa_no }}">
+                        </div>
+                    </div>
+                    <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] mt-4">Telefonla Okutunuz</p>
+                </div>
+
+                <div class="bg-slate-900 flex flex-col items-center justify-center text-white rounded-b-[2rem]">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">MASA</span>
+                        <span class="text-5xl font-black tracking-tighter">{{ qr.masa_no }}</span>
+                    </div>
+                </div>
+
             </div>
             {% endfor %}
         </div>
     </div>
 
+    <script>
+        const nameInput = document.getElementById('nameInput');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const nameDisplays = document.querySelectorAll('.dynamic-name');
+
+        // İsim Değiştirme
+        nameInput.addEventListener('input', function() {
+            nameDisplays.forEach(display => {
+                display.innerText = this.value;
+            });
+        });
+
+        // Font Boyutu Değiştirme
+        sizeSlider.addEventListener('input', function() {
+            const newSize = this.value + 'px';
+            nameDisplays.forEach(display => {
+                display.style.fontSize = newSize;
+            });
+        });
+    </script>
 </body>
-</html> 
+</html>
